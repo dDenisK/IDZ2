@@ -1,24 +1,24 @@
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const MS_PER_DAY = 1000 * 60 * 60 * 24; // Кількість мілісекунд у дні для розрахунків
 
 /**
- * Парсить святкові дні з текстового поля у масив об'єктів Date.
+ * Парсить святкові дні з текстового поля у масив рядків.
  * @returns {Array<string>} Масив рядків у форматі 'YYYY-MM-DD'
  */
 function parseHolidays() {
-    const text = document.getElementById('holidays').value;
-    const holidayDates = text.split(/[\n,]+/)
-        .map(s => s.trim())
-        .filter(s => s.match(/^\d{4}-\d{2}-\d{2}$/)); // Фільтруємо лише коректний формат
-    return holidayDates;
+    const text = document.getElementById('holidays').value; // отримуємо посилання на текстове поле
+    const holidayDates = text.split(/[\n,]+/) // розділяємо за комами або новими рядками
+        .map(s => s.trim()) // видаляємо зайві пробіли
+        .filter(s => s.match(/^\d{4}-\d{2}-\d{2}$/)); // залишаємо лише коректні дати у форматі 'YYYY-MM-DD'
+    return holidayDates; // повертаємо чистий масив рядків святкових днів
 }
 
 /**
- * Перевіряє, чи є дата неділею (день тижня = 0)
+ * Перевіряє, чи є дата неділею
  * @param {Date} date
  * @returns {boolean}
  */
 function isSunday(date) {
-    return date.getDay() === 0;
+    return date.getDay() === 0; // (0 - неділя, 6 - субота, інші дні - 1-5)
 }
 
 /**
@@ -28,30 +28,32 @@ function isSunday(date) {
  * @returns {boolean}
  */
 function isHoliday(date, holidays) {
-    const dateString = date.toISOString().slice(0, 10);
-    return holidays.includes(dateString);
+    // Перетворюємо об'єкт Date на рядок у форматі ISO 8601 ("2025-12-15T10:00:00.000Z")
+    const dateString = date.toISOString().slice(0, 10); // .slice(0, 10) обрізає рядок, залишаючи лише перші 10 символів
+    return holidays.includes(dateString); // метод includes() для перевірки, чи міститься отриманий рядок dateString у масиві святкових днів holidays
 }
 
 /**
  * Основна функція розрахунку
  */
 function calculateVacation() {
+    // Зчитуювання вхідних даних з трьох полів вводу
     const startDateInput = document.getElementById('startDate').value;
     const endDateInput = document.getElementById('endDate').value;
     const durationInput = document.getElementById('duration').value;
-    const holidays = parseHolidays();
-    const output = document.getElementById('resultOutput');
-    let warnings = [];
+    const holidays = parseHolidays(); // викликаємо parseHolidays для зчитуванняя та очищення списку святкових днів
+    const output = document.getElementById('resultOutput'); // посилання на поле виводу результату
+    let warnings = []; // масив для зберігання попереджень (дата перепадає на неділю)
 
     // Перетворення вхідних даних
-    let startDate = startDateInput ? new Date(startDateInput) : null;
-    let endDate = endDateInput ? new Date(endDateInput) : null;
-    let duration = durationInput ? parseInt(durationInput) : null;
+    let startDate = startDateInput ? new Date(startDateInput) : null; // якщо є вхідні дані, створюємо об'єкт Date, інакше null
+    let endDate = endDateInput ? new Date(endDateInput) : null; // аналогічно для дати завершення
+    let duration = durationInput ? parseInt(durationInput) : null; // якщо є вхідні дані, перетворюємо на ціле число, інакше null
 
-    let resultDate, resultDuration;
+    let resultDate, resultDuration; // змінні для зберігання результату розрахунку (дата або тривалість)
     let calculationMode = 0; // 1: Знайти тривалість, 2: Знайти початок, 3: Знайти завершення
 
-    // 1. Визначення режиму розрахунку
+    // Визначення режиму розрахунку
     if (startDate && endDate && !durationInput) {
         calculationMode = 1; // Знайти Тривалість
     } else if (endDate && duration && !startDateInput) {
@@ -59,50 +61,52 @@ function calculateVacation() {
     } else if (startDate && duration && !endDateInput) {
         calculationMode = 3; // Знайти Завершення
     } else {
-        output.innerHTML = "🛑 **Помилка:** Будь ласка, введіть рівно два з трьох параметрів (Дата Початку, Дата Завершення, Тривалість).";
+        output.innerHTML = "🛑 Помилка: Будь ласка, введіть рівно два з трьох параметрів (Дата Початку, Дата Завершення, Тривалість).";
         return;
     }
 
-    // 2. Виконання розрахунку
+    // Виконання розрахунку
     switch (calculationMode) {
         case 1: // Знайти Тривалість (Дата Початку і Дата Завершення відомі)
             if (startDate > endDate) {
-                output.innerHTML = "🛑 **Помилка:** Дата початку не може бути пізнішою за дату завершення.";
+                output.innerHTML = "🛑 Помилка: Дата початку не може бути пізнішою за дату завершення.";
                 return;
             }
-            resultDuration = calculateDuration(startDate, endDate, holidays);
-            output.innerHTML = `✅ **Розрахункова Тривалість:** ${resultDuration} ${getNounCase(resultDuration)} (включно).`;
+            resultDuration = calculateDuration(startDate, endDate, holidays); // функція для розрахунку тривалості
+            output.innerHTML = `✅ Розрахункова Тривалість: ${resultDuration} ${getNounCase(resultDuration)} (включно).`; // getNounCase для відмінювання слова "день"
             break;
 
         case 2: // Знайти Початок (Дата Завершення і Тривалість відомі)
             resultDate = calculateStartDate(endDate, duration, holidays);
-            output.innerHTML = `✅ **Розрахункова Дата Початку:** ${formatDate(resultDate)}.`;
+            output.innerHTML = `✅ Розрахункова Дата Початку: ${formatDate(resultDate)}.`; // formatDate для форматування дати у зручний вигляд
             break;
 
         case 3: // Знайти Завершення (Дата Початку і Тривалість відомі)
             resultDate = calculateEndDate(startDate, duration, holidays);
-            output.innerHTML = `✅ **Розрахункова Дата Завершення:** ${formatDate(resultDate)}.`;
+            output.innerHTML = `✅ Розрахункова Дата Завершення: ${formatDate(resultDate)}.`; // formatDate для форматування дати у зручний вигляд
             break;
     }
 
-    // 3. Перевірка на Неділю
-    const checkStart = calculationMode === 2 ? resultDate : startDate;
-    const checkEnd = calculationMode === 3 ? resultDate : endDate;
+    // Перевірка на Неділю
+    const checkStart = calculationMode === 2 ? resultDate : startDate; // визначення дати початку для перевірки
+    const checkEnd = calculationMode === 3 ? resultDate : endDate; // визначення дати завершення для перевірки
 
+    // Якщо дата початку існує, і вона припадає на неділю...
     if (checkStart && isSunday(checkStart)) {
-        warnings.push(`Дата початку (${formatDate(checkStart)}) припадає на неділю.`);
+        warnings.push(`Дата початку (${formatDate(checkStart)}) припадає на неділю.`); // ...додаємо попередження до масиву
     }
+    // Якщо дата завершення існує, і вона припадає на неділю...
     if (checkEnd && isSunday(checkEnd)) {
-        warnings.push(`Дата завершення (${formatDate(checkEnd)}) припадає на неділю.`);
+        warnings.push(`Дата завершення (${formatDate(checkEnd)}) припадає на неділю.`); // ...додаємо попередження до масиву
     }
 
-    // 4. Виведення попереджень
+    // Якщо масив попереджень не порожній...
     if (warnings.length > 0) {
-        output.innerHTML += `<div class="warning">⚠️ Увага:<br>- ${warnings.join('<br>- ')}</div>`;
+        output.innerHTML += `<div class="warning">⚠️ Увага:<br>- ${warnings.join('<br>- ')}</div>`; // ...додаємо попередження до вже існуючого виводу результату
     }
 }
 
-// --- Функції для розрахунку ---
+// Функції для розрахунку
 
 /**
  * Режим 1: Розрахунок тривалості між двома датами
@@ -112,18 +116,18 @@ function calculateVacation() {
  * @returns {number} Тривалість у днях
  */
 function calculateDuration(start, end, holidays) {
-    let count = 0;
-    let currentDate = new Date(start);
+    let count = 0; // ініціалізація лічильника робочих днів
+    let currentDate = new Date(start); // копія дати початку для ітерації
 
     // Цикл ітерує від дати початку до дати завершення ВКЛЮЧНО
     while (currentDate.getTime() <= end.getTime()) {
+        // Якщо поточна дата не є святковим днем...
         if (!isHoliday(currentDate, holidays)) {
-            count++;
+            count++; // ...збільшуємо лічильник робочих днів
         }
-        // Перехід на наступний день
-        currentDate.setTime(currentDate.getTime() + MS_PER_DAY);
+        currentDate.setTime(currentDate.getTime() + MS_PER_DAY); // перехід на наступний день
     }
-    return count;
+    return count; // повертаємо загальну кількість робочих днів
 }
 
 /**
@@ -134,13 +138,14 @@ function calculateDuration(start, end, holidays) {
  * @returns {Date} Дата завершення
  */
 function calculateEndDate(start, duration, holidays) {
-    let daysLeft = duration;
-    let currentDate = new Date(start);
+    let daysLeft = duration; // ініціалізація лічильника залишкових днів
+    let currentDate = new Date(start); // копія дати початку для ітерації
 
-    // Відлік починається з дати початку (якщо вона не свято)
+    // Відлік починається з дати початку
     while (daysLeft > 0) {
+        // Якщо поточна дата не є святковим днем...
         if (!isHoliday(currentDate, holidays)) {
-            daysLeft--;
+            daysLeft--; // ...зменшуємо лічильник залишкових днів
         }
 
         // Якщо дні закінчилися, то це і є дата завершення
@@ -148,10 +153,9 @@ function calculateEndDate(start, duration, holidays) {
             break;
         }
 
-        // Перехід на наступний день
-        currentDate.setTime(currentDate.getTime() + MS_PER_DAY);
+        currentDate.setTime(currentDate.getTime() + MS_PER_DAY); // перехід на наступний день
     }
-    return currentDate;
+    return currentDate; // повертаємо об'єкт Date, що є датою завершення
 }
 
 /**
@@ -162,13 +166,14 @@ function calculateEndDate(start, duration, holidays) {
  * @returns {Date} Дата початку
  */
 function calculateStartDate(end, duration, holidays) {
-    let daysLeft = duration;
-    let currentDate = new Date(end);
+    let daysLeft = duration; // ініціалізація лічильника залишкових днів
+    let currentDate = new Date(end); // копія дати завершення для ітерації
 
-    // Відлік починається з дати завершення (якщо вона не свято)
+    // Відлік починається з дати завершення
     while (daysLeft > 0) {
+        // Якщо поточна дата не є святковим днем...
         if (!isHoliday(currentDate, holidays)) {
-            daysLeft--;
+            daysLeft--; // ...зменшуємо лічильник залишкових днів
         }
 
         // Якщо дні закінчилися, то це і є дата початку
@@ -176,21 +181,27 @@ function calculateStartDate(end, duration, holidays) {
             break;
         }
 
-        // Перехід на попередній день
-        currentDate.setTime(currentDate.getTime() - MS_PER_DAY);
+        currentDate.setTime(currentDate.getTime() - MS_PER_DAY); // перехід на попередній день
     }
-    return currentDate;
+    return currentDate; // повертаємо об'єкт Date, що є датою початку
 }
 
-// --- Допоміжні функції ---
+// Допоміжні функції
 
+// Перетворює об'єкт Date у рядок формату 'DD.MM.YYYY'
 function formatDate(date) {
+    // Об'єкт options визначає, як саме потрібно форматувати дату
     const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+    // toLocaleDateString (вбудований в об'єкти Date) з 'uk-UA' для українського формату дати
     return date.toLocaleDateString('uk-UA', options);
 }
 
+// Відмінювання слова "день" залежно від числа
 function getNounCase(number) {
+    // 'день', якщо закінчується на 1 (1, 21, 31, ...), але не на 11 (11, 111, ...)
     if (number % 10 === 1 && number % 100 !== 11) return 'день';
+    // 'дні', якщо закінчується на 2, 3, 4 (2, 23, 24, ...), але не на 12, 13, 14 (12, 113 ...)
     if ([2, 3, 4].includes(number % 10) && ![12, 13, 14].includes(number % 100)) return 'дні';
+    // 'днів' у всіх інших випадках (0, 5, 6, 7, 8, 9, а також усі винятки)
     return 'днів';
 }
